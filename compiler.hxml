@@ -1,0 +1,7 @@
+-js compile.js
+-main Compiler
+-cp src
+-lib hxmustache:0.2.2
+-lib hxnodejs
+-dce full
+-resource Contract.hx@template

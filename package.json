@@ -1,0 +1,10 @@
+{
+  "name": "abi2hx",
+  "description": "",
+  "author": "",
+  "devDependencies": {
+    "fs-extra": "0.30.0",
+    "solc": "0.4.11"
+  },
+  "engine": "node >= 5.0.0"
+}
