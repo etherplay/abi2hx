@@ -158,7 +158,7 @@ class Compiler{
 				for(input in constructorFunc.inputs){
 					inputs.push({
 						name:input.name,
-						type:haxeType(input.type),
+						type:inputHaxeType(input.type),
 						last:false,
 						index:i,
 						alone:false,
@@ -188,7 +188,7 @@ class Compiler{
 					for(input in func.inputs){
 						cfunc.inputs.push({
 							name:input.name,
-							type:haxeType(input.type),
+							type:inputHaxeType(input.type),
 							last:false,
 							index:i,
 							alone:false,
@@ -285,6 +285,20 @@ class Compiler{
 			case "uint32" | "uint8" | "uint16" : "UInt";
 			case "bytes" | "bytes32" : "String";
 			case "uint256" | "uint64" | "uint88" | "uint128" : "bignumberjs.BigNumber";
+			case "address" : "web3.Web3.Address";
+			case "uint8[]" | "uint32[]" : "Array<UInt>";
+			case "string" : "String";
+			default:	trace("TODO : solidityType mapping : ", solidityType); "Dynamic";	
+		}
+	}
+
+	static function inputHaxeType(solidityType : String) : String{
+		return switch(solidityType){
+			case "bool": "Bool";
+			case "address[]": "Array<web3.Web3.Address>";
+			case "uint32" | "uint8" | "uint16" : "UInt";
+			case "bytes" | "bytes32" : "String";
+			case "uint256" | "uint64" | "uint88" | "uint128" : "String"; //TODO bigNumber but require conversion back to String
 			case "address" : "web3.Web3.Address";
 			case "uint8[]" | "uint32[]" : "Array<UInt>";
 			case "string" : "String";
