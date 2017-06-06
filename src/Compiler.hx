@@ -86,7 +86,7 @@ class Compiler{
 
 		trace("compiling ...");
 		var output = Solc.compile({sources: input}, 1);
-		trace(output);
+		// trace(output);
 
 		var contractInfos : ContractInfos = output.contracts;
 
@@ -125,6 +125,10 @@ class Compiler{
 			var contractABIString = contractInfo["interface"];
 			var contractABI : ContractABI = Json.parse(contractABIString);
 			var contractBytecode = contractInfo["bytecode"]; 
+
+			var output_filename = contractName + "_abi.json";
+			trace("writing to " + output_filename + " ...");
+			js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractABI)); 
 
 			trace("contract : " + contractName);
 
