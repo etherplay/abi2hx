@@ -44,6 +44,33 @@ class {{className}}{
 	}
 	#end
 
+	public function sendRawData(data : String, option : {privateKey : Dynamic, ?nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
+	callback:Error->TransactionHash->Void,
+	?mineCallback:Error->String->TransactionReceipt->Void,
+	?timeout : UInt){
+		var rawTx = {
+			nonce: "0x"+StringTools.hex(option.nonce),
+			gasPrice: option.gasPrice == null ? "0x1" : "0x" + option.gasPrice.toString(16), 
+			gasLimit: "0x" + StringTools.hex(option.gas),
+			to: this.address, 
+			value: option.value == null ? "0x0" :"0x" + option.value.toString(16), 
+			data: data
+		};
+		var tx = new ethereumjs.Tx(rawTx);
+		tx.sign(option.privateKey);
+		var serializedTx = tx.serialize();
+		_web3.eth.sendRawTransaction(serializedTx.toString('hex'), function(err, txHash) {
+			callback(err,txHash);
+			if(err == null && mineCallback != null){
+				if(timeout != null){
+					web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback, timeout);
+				}else{
+					web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback);
+				}
+			}
+		});
+	}
+
 	{{#commitFunctions}}
 	public function commit_to_{{{name}}}(
 	{{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} },{{/inputs.length}}
@@ -53,22 +80,51 @@ class {{className}}{
 	?timeout : UInt
 	):Void{
 
-		// untyped __js__("
-		_instance.{{{name}}}.sendTransaction(
-			{{#inputs}} params.{{{name}}},{{/inputs}}
-			option,
-			function(err,txHash){
-				callback(err,txHash);
-				if(err == null && mineCallback != null){
-					if(timeout != null){
-						web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback, timeout);
+		if(option.privateKey != null){
+			var data = this.get_data_for_{{{name}}}(params);
+			if(option.nonce != null){
+				sendRawData(data,{
+					privateKey : option.privateKey,
+					nonce : option.nonce,
+					gasPrice : option.gasPrice,
+					gas : option.gas,
+					value: option.value
+				},callback,mineCallback,timeout);
+			}else{
+				_web3.eth.getTransactionCount(option.from, function(err, nonce){
+					if(err != null){
+						callback(err,null);
 					}else{
-						web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback);
+						sendRawData(data,{
+							privateKey : option.privateKey,
+							nonce : nonce,
+							gasPrice : option.gasPrice,
+							gas : option.gas,
+							value: option.value
+						},callback,mineCallback,timeout);
+					}
+					
+				});
+			}
+		}else{
+			// untyped __js__("
+			_instance.{{{name}}}.sendTransaction(
+				{{#inputs}} params.{{{name}}},{{/inputs}}
+				option,
+				function(err,txHash){
+					callback(err,txHash);
+					if(err == null && mineCallback != null){
+						if(timeout != null){
+							web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback, timeout);
+						}else{
+							web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback);
+						}
 					}
 				}
-			}
-		);
-		// ");
+			);
+			// ");
+		}
+
 	}
 	{{/commitFunctions}}
 
