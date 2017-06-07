@@ -72,6 +72,19 @@ class {{className}}{
 	}
 	{{/commitFunctions}}
 
+	{{#commitFunctions}}
+	public function get_data_for_{{{name}}}(
+	{{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} }{{/inputs.length}}
+	):String{
+
+		// untyped __js__("
+		return _instance.{{{name}}}.getData(
+			{{#inputs}} params.{{{name}}}{{^last}},{{/last}}{{/inputs}}
+		);
+		// ");
+	}
+	{{/commitFunctions}}
+
 	{{#probeFunctions}}
 	public function probe_{{{name}}}(
 	{{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} },{{/inputs.length}}

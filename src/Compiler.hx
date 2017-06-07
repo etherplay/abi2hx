@@ -86,7 +86,7 @@ class Compiler{
 
 		trace("compiling ...");
 		var output = Solc.compile({sources: input}, 1);
-		// trace(output);
+		trace(output);
 
 		var contractInfos : ContractInfos = output.contracts;
 
