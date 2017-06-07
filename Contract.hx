@@ -44,6 +44,7 @@ class {{className}}{
 	}
 	#end
 
+	#if web3_allow_privateKey
 	public function sendRawData(data : String, option : {privateKey : Dynamic, ?nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
 	callback:Error->TransactionHash->Void,
 	?mineCallback:Error->String->TransactionReceipt->Void,
@@ -70,6 +71,7 @@ class {{className}}{
 			}
 		});
 	}
+	#end
 
 	{{#commitFunctions}}
 	public function commit_to_{{{name}}}(
@@ -80,6 +82,7 @@ class {{className}}{
 	?timeout : UInt
 	):Void{
 
+		#if web3_allow_privateKey
 		if(option.privateKey != null){
 			var data = this.get_data_for_{{{name}}}(params);
 			if(option.nonce != null){
@@ -107,6 +110,7 @@ class {{className}}{
 				});
 			}
 		}else{
+		#end
 			// untyped __js__("
 			_instance.{{{name}}}.sendTransaction(
 				{{#inputs}} params.{{{name}}},{{/inputs}}
@@ -123,7 +127,9 @@ class {{className}}{
 				}
 			);
 			// ");
+		#if web3_allow_privateKey
 		}
+		#end
 
 	}
 	{{/commitFunctions}}
