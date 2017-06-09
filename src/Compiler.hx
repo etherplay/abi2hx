@@ -270,6 +270,8 @@ class Compiler{
 			return ".map(function(curr,index,arr){return curr.toNumber();})";
 		}else if(solidityType == "uint8"){
 			return ".toNumber()";
+		}else if(solidityType == "int8"){
+			return ".toNumber()";
 		}else if(solidityType == "uint256"){
 			
 		}else if(solidityType == "address"){
@@ -287,6 +289,7 @@ class Compiler{
 			case "bool": "Bool";
 			case "address[]": "Array<web3.Web3.Address>";
 			case "uint32" | "uint8" | "uint16" : "UInt";
+			case "int32" | "int8" | "int16" : "Int";
 			case "bytes" | "bytes32" : "String";
 			case "uint256" | "uint64" | "uint88" | "uint128" : "bignumberjs.BigNumber";
 			case "address" : "web3.Web3.Address";
@@ -301,6 +304,7 @@ class Compiler{
 			case "bool": "Bool";
 			case "address[]": "Array<web3.Web3.Address>";
 			case "uint32" | "uint8" | "uint16" : "UInt";
+			case "int32" | "int8" | "int16" : "Int";
 			case "bytes" | "bytes32" : "String";
 			case "uint256" | "uint64" | "uint88" | "uint128" : "String"; //TODO bigNumber but require conversion back to String
 			case "address" : "web3.Web3.Address";
