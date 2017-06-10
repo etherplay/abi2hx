@@ -45,11 +45,12 @@ class {{className}}{
 	#end
 
 	#if web3_allow_privateKey
-	public function sendRawData(data : String, option : {privateKey : Dynamic, ?nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
+	public function sendRawData(data : String, option : {from : Address, privateKey : Dynamic, ?nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
 	callback:Error->TransactionHash->Void,
 	?mineCallback:Error->String->TransactionReceipt->Void,
 	?timeout : UInt){
 		var rawTx = {
+			from : option.from,
 			nonce: "0x"+StringTools.hex(option.nonce),
 			gasPrice: option.gasPrice == null ? "0x" + new bignumberjs.BigNumber("20000000000").toString(16) : "0x" + option.gasPrice.toString(16), 
 			gasLimit: "0x" + StringTools.hex(option.gas),
@@ -87,6 +88,7 @@ class {{className}}{
 			var data = this.get_data_for_{{{name}}}(params);
 			if(option.nonce != null){
 				sendRawData(data,{
+					from:option.from,
 					privateKey : option.privateKey,
 					nonce : option.nonce,
 					gasPrice : option.gasPrice,
@@ -99,6 +101,7 @@ class {{className}}{
 						callback(err,null);
 					}else{
 						sendRawData(data,{
+							from:option.from,
 							privateKey : option.privateKey,
 							nonce : nonce,
 							gasPrice : option.gasPrice,
