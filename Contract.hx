@@ -51,7 +51,7 @@ class {{className}}{
 	?timeout : UInt){
 		var rawTx = {
 			nonce: "0x"+StringTools.hex(option.nonce),
-			gasPrice: option.gasPrice == null ? "0x1" : "0x" + option.gasPrice.toString(16), 
+			gasPrice: option.gasPrice == null ? "0x" + new bignumberjs.BigNumber("20000000000").toString(16) : "0x" + option.gasPrice.toString(16), 
 			gasLimit: "0x" + StringTools.hex(option.gas),
 			to: this.address, 
 			value: option.value == null ? "0x0" :"0x" + option.value.toString(16), 
@@ -60,7 +60,7 @@ class {{className}}{
 		var tx = new ethereumjs.Tx(rawTx);
 		tx.sign(option.privateKey);
 		var serializedTx = tx.serialize();
-		_web3.eth.sendRawTransaction(serializedTx.toString('hex'), function(err, txHash) {
+		_web3.eth.sendRawTransaction("0x" + serializedTx.toString('hex'), function(err, txHash) {
 			callback(err,txHash);
 			if(err == null && mineCallback != null){
 				if(timeout != null){
