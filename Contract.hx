@@ -58,10 +58,8 @@ class {{className}}{
 			value: option.value == null ? "0x0" :"0x" + option.value.toString(16), 
 			data: data
 		};
-		var tx = new ethereumjs.Tx(rawTx);
-		tx.sign(option.privateKey);
-		var serializedTx = tx.serialize();
-		_web3.eth.sendRawTransaction("0x" + serializedTx.toString('hex'), function(err, txHash) {
+		var signedTx = ethjs.EthSigner.sign(rawTx,option.privateKey);
+		_web3.eth.sendRawTransaction(signedTx, function(err, txHash) {
 			callback(err,txHash);
 			if(err == null && mineCallback != null){
 				if(timeout != null){
