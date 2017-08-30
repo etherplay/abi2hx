@@ -45,7 +45,7 @@ class {{className}}{
 	#end
 
 	#if web3_allow_privateKey
-	public function sendRawData(data : String, option : {from : Address, privateKey : Dynamic, ?nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
+	public function sendRawData(data : String, option : {from : Address, privateKey : Dynamic, nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
 	callback:Error->TransactionHash->UInt->Void,
 	?mineCallback:Error->String->TransactionReceipt->Void,
 	?timeout : UInt){
