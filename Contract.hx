@@ -46,7 +46,7 @@ class {{className}}{
 
 	#if web3_allow_privateKey
 	public function sendRawData(data : String, option : {from : Address, privateKey : Dynamic, ?nonce:UInt, gasPrice : web3.Web3.Wei, gas : UInt, value : web3.Web3.Wei},
-	callback:Error->TransactionHash->Void,
+	callback:Error->TransactionHash->UInt->Void,
 	?mineCallback:Error->String->TransactionReceipt->Void,
 	?timeout : UInt){
 		var rawTx = {
@@ -60,7 +60,7 @@ class {{className}}{
 		};
 		var signedTx = ethjs.EthSigner.sign(rawTx,option.privateKey);
 		_web3.eth.sendRawTransaction(signedTx, function(err, txHash) {
-			callback(err,txHash);
+			callback(err,txHash,option.nonce);
 			if(err == null && mineCallback != null){
 				if(timeout != null){
 					web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback, timeout);
@@ -76,7 +76,7 @@ class {{className}}{
 	public function commit_to_{{{name}}}(
 	{{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} },{{/inputs.length}}
 	option:TransactionInfo,
-	callback:Error->TransactionHash->Void,
+	callback:Error->TransactionHash->UInt->Void,
 	?mineCallback:Error->String->TransactionReceipt->Void,
 	?timeout : UInt
 	):Void{
@@ -96,7 +96,7 @@ class {{className}}{
 			}else{
 				_web3.eth.getTransactionCount(option.from, function(err, nonce){
 					if(err != null){
-						callback(err,null);
+						callback(err,null,null);
 					}else{
 						sendRawData(data,{
 							from:option.from,
@@ -117,7 +117,7 @@ class {{className}}{
 				{{#inputs}} params.{{{name}}},{{/inputs}}
 				option,
 				function(err,txHash){
-					callback(err,txHash);
+					callback(err,txHash,null);
 					if(err == null && mineCallback != null){
 						if(timeout != null){
 							web3.Web3Util.waitForTransactionReceipt(_web3,txHash,mineCallback, timeout);
