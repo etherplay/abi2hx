@@ -262,6 +262,8 @@ class Compiler{
 
 		}else if(solidityType == "uint32"){
 			return ".toNumber()";
+		}else if(solidityType == "uint16"){
+			return ".toNumber()";
 		}else if(solidityType == "bytes"){
 
 		}else if(solidityType == "uint8[]"){
