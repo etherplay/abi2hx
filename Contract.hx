@@ -221,13 +221,14 @@ class {{className}}{
 
 	static var factory : haxe.DynamicAccess<Dynamic>;
 	static var code : String;
+	static var abi : Array<Dynamic> = haxe.Json.parse('{{{abi}}}');
 
 	static function setup(_web3 : web3.Web3){
 		if(factory == null){
 			#if web3_allow_deploy
 			code = "0x" + "{{bytecode}}";
 			#end
-			factory = _web3.eth.contract(haxe.Json.parse('{{{abi}}}'));
+			factory = _web3.eth.contract(abi);
 		}
 	}
 
