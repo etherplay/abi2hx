@@ -115,7 +115,12 @@ class {{className}}{
 			// untyped __js__("
 			_instance.{{{name}}}.sendTransaction(
 				{{#inputs}} params.{{{name}}},{{/inputs}}
-				option,
+				{
+					from:option.from,
+					gas:option.gas,
+					value:option.value,
+					gasPrice:option.gasPrice
+				},
 				function(err,txHash){
 					callback(err,txHash,null);
 					if(err == null && mineCallback != null){
