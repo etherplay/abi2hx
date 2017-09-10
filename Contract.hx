@@ -226,7 +226,7 @@ class {{className}}{
 
 	static var factory : haxe.DynamicAccess<Dynamic>;
 	static var code : String;
-	static var abi : Array<Dynamic> = haxe.Json.parse('{{{abi}}}');
+	public static var abi : Array<Dynamic> = haxe.Json.parse('{{{abi}}}');
 
 	static function setup(_web3 : web3.Web3){
 		if(factory == null){
