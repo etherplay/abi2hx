@@ -2,44 +2,75 @@ package {{packagePath}};
 
 import web3.Web3;
 
+// abstract {{className}}PromiseEvent(PromiEvent<{{className}}>) from(PromiEvent<{{className}}>){
+// 	function onceTransactionHash(callback : TransactionHash -> Void): {{className}}PromiseEvent{
+// 		return this.once(Hash,callback);
+// 	}
+// 	function onceReceipt(callback : TransactionReceipt -> Void): {{className}}PromiseEvent{
+// 		return this.once(Receipt,callback);
+// 	}
+// 	function onConfirmation(callback: Float -> TransactionReceipt -> Void) : {{className}}PromiseEvent{
+// 		return this.on(Confirmation,callback);
+// 	}
+// 	function onError(callback: Error -> TransactionReceipt -> Void) : {{className}}PromiseEvent{
+// 		return this.on(Error,callback);
+// 	}
+// }
+
+typedef ExtendedTransactionInfo = {
+	> TransactionInfo
+	,privateKey : String
+}
+
 class {{className}}{
 
-	public var address(default,null) : Address;
+	public var address(get,null) : Address;
+
+	function get_address() : Address{
+		return _instance.options.address;
+	}
 
 	public static function at(web3 : Web3, address : Address) : {{className}}{
 		setup(web3);
-		return new {{className}}(web3,address);
+		var instance : web3.eth.Contract = factory.clone();
+		instance.options.address = address;
+		return new {{className}}(web3,instance);
 	}
 
 	#if web3_allow_deploy
-	public static function deploy(web3 : Web3, option:TransactionInfo, callback : Error -> Dynamic -> Void, mineCallback : Error -> Dynamic -> Void) : Void{ //TODO arguments + type of callback
+	public static function deploy(web3 : Web3, option:TransactionInfo, callback : Error -> TransactionHash -> Void, mineCallback : Error -> {{className}} -> Void) : Void{ //TODO arguments + type of callback
 		var mining = false;
 		setup(web3);
-		factory["new"]({ //TODO arguments
+		factory
+		.deploy({
+			data:code,
+			//TODO arguments:
+		})
+		.send({
 			from: option.from,
 			gas : option.gas, 
 			value : option.value,
-			gasPrice : option.gasPrice,
-			data: code
-		}, function(err, deployedContract){
-			if(err != null){
-				if(mining){
-					mineCallback(err, null);
-				}else{
-					callback(err, null);
-				}
-			}else{
-				if(deployedContract.address != null){
-					mineCallback(null, new {{className}}(web3,deployedContract.address));
-				}else{
-					if(mining){
-						mineCallback("no address", null);
-					}else{
-						callback(null,deployedContract);
-					}
-				}
-			}
+			gasPrice : option.gasPrice
+		})
+		.onceTransactionHash(function(txHash){
 			mining = true;
+			callback(null,txHash);
+		})
+		.onError(function(error,receipt){
+			if(mining){
+				mineCallback(error,null);
+			}else{
+				callback(error,null);
+			}
+		})
+		// .onceReceipt(function(receipt){
+		// 	//TODO ?
+		// })
+		// .onConfirmation(function(){
+		// 	//dontcare
+		// })
+		.then(function(instance){
+			mineCallback(null,new {{className}}(web3,instance));
 		});
 	}
 	#end
@@ -59,7 +90,7 @@ class {{className}}{
 			data: data
 		};
 		var signedTx = ethjs.EthSigner.sign(rawTx,option.privateKey);
-		_web3.eth.sendRawTransaction(signedTx, function(err, txHash) {
+		_web3.eth.sendSignedTransaction(signedTx, function(err, txHash) {
 			callback(err,txHash,option.nonce);
 			if(err == null && mineCallback != null){
 				if(timeout != null){
@@ -75,7 +106,7 @@ class {{className}}{
 	{{#commitFunctions}}
 	public function commit_to_{{{name}}}(
 	{{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} },{{/inputs.length}}
-	option:TransactionInfo,
+	option:ExtendedTransactionInfo,
 	callback:Error->TransactionHash->UInt->Void,
 	?mineCallback:Error->String->TransactionReceipt->Void,
 	?timeout : UInt
@@ -113,8 +144,8 @@ class {{className}}{
 		}else{
 		#end
 			// untyped __js__("
-			_instance.{{{name}}}.sendTransaction(
-				{{#inputs}} params.{{{name}}},{{/inputs}}
+			_instance.methods.{{{name}}}({{#inputs}} params.{{{name}}}{{^last}},{{/last}}{{/inputs}})
+			.send(
 				{
 					from:option.from,
 					gas:option.gas,
@@ -146,9 +177,8 @@ class {{className}}{
 	):String{
 
 		// untyped __js__("
-		return _instance.{{{name}}}.getData(
-			{{#inputs}} params.{{{name}}}{{^last}},{{/last}}{{/inputs}}
-		);
+		return _instance.methods.{{{name}}}({{#inputs}}params.{{{name}}}{{^last}},{{/last}}{{/inputs}}).encodeABI();
+		
 		// ");
 	}
 	{{/commitFunctions}}
@@ -160,8 +190,8 @@ class {{className}}{
 	callback:Error{{#outputs.length}}->{ {{#outputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/outputs}} }{{/outputs.length}}
 	->Void
 	):Void{
-		_instance.{{{name}}}.call(
-			{{#inputs}} params.{{{name}}},{{/inputs}}
+		_instance.methods.{{{name}}}({{#inputs}} params.{{{name}}}{{^last}},{{/last}}{{/inputs}})
+		.call(
 			option,
 			function(err,result){
 				if(err != null){
@@ -181,26 +211,6 @@ class {{className}}{
 	}
 	{{/probeFunctions}}
 
-	// {{#probeFunctions}}
-	// public function get_data_to_{{{name}}}(
-	// {{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} },{{/inputs.length}}
-	// option:CallInfo,
-	// callback:Error->String
-	// ->Void
-	// ):Void{
-	// 	_instance.{{{name}}}.getData(
-	// 		{{#inputs}} params.{{{name}}},{{/inputs}}
-	// 		option,
-	// 		function(err,data : String){
-	// 			if(err != null){
-	// 				callback(err, null);
-	// 			}else{
-	// 				callback(null,data);
-	// 			}
-	// 		}
-	// 	);
-	// }
-	// {{/probeFunctions}}
 
 	{{#probeFunctions}}
 	public function estimateGas_for_{{{name}}}(
@@ -209,8 +219,8 @@ class {{className}}{
 	callback:Error->Float
 	->Void
 	):Void{
-		_instance.{{{name}}}.estimateGas(
-			{{#inputs}} params.{{{name}}},{{/inputs}}
+		_instance.methods.{{{name}}}({{#inputs}} params.{{{name}}}{{^last}},{{/last}}{{/inputs}})
+		.estimateGas(
 			option,
 			function(err,gas : Float){
 				if(err != null){
@@ -224,25 +234,36 @@ class {{className}}{
 	{{/probeFunctions}}
 
 
-	static var factory : haxe.DynamicAccess<Dynamic>;
+	{{#events}}
+	public function gather_{{{name}}}_events(
+		options :{
+			?fromBlock:Float,
+			?toBlock:Float,
+			?filter:Dynamic //TODO
+		}, callback : Error -> Array<web3.Web3.Log> -> Void
+	) : Void{
+		_instance.getPastEvents("{{name}}", options, callback);
+	}
+	{{/events}}
+
+	static var factory : web3.eth.Contract;
 	static var code : String;
-	public static var abi : Array<Dynamic> = haxe.Json.parse('{{{abi}}}');
+	public static var abi : ABI = haxe.Json.parse('{{{abi}}}');
 
 	static function setup(_web3 : web3.Web3){
 		if(factory == null){
 			#if web3_allow_deploy
 			code = "0x" + "{{bytecode}}";
 			#end
-			factory = _web3.eth.contract(abi);
+			factory = new Web3.eth.Contract(abi);
 		}
 	}
 
 	var _web3 : web3.Web3;
-	var _instance : Dynamic;
+	var _instance  : web3.eth.Contract;
 
-	private function new(_web3 : web3.Web3,address : web3.Web3.Address) { 
+	private function new(_web3 : web3.Web3,instance : web3.eth.Contract ) { 
 		this._web3 = _web3;
-		_instance = factory["at"](address);
-		this.address = address;
+		_instance = instance;
 	}
 }

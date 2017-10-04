@@ -4,4 +4,7 @@
 -lib hxmustache:0.2.2
 -lib hxnodejs
 -dce full
--resource Contract.hx@template
+-resource Web3Contract.hx@template
+
+-lib jstack
+-debug

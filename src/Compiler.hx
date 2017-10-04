@@ -3,6 +3,7 @@ import haxe.Json;
 
 typedef ContractInfos = DynamicAccess<DynamicAccess<Dynamic>>;
 typedef ContractType = {
+	?indexed:Bool,
 	name : String,
 	type : String
 };
@@ -16,9 +17,6 @@ typedef ContractFunction = {
 typedef ContractABI = Array<ContractFunction>;
 
 
-
-
-
 typedef Param = {
 	name : String,
 	type : String,
@@ -28,10 +26,25 @@ typedef Param = {
 	transform:String
 }
 
+typedef EParam = {
+	indexed : Bool,
+	name : String,
+	type : String,
+	last : Bool,
+	index : Int,
+	alone : Bool,
+	transform : String
+}
+
 typedef CFunction = {
 	name : String,
 	inputs : Array<Param>,
 	outputs : Array<Param>
+}
+
+typedef CEvent = {
+	name : String,
+	inputs:Array<EParam>
 }
 
 typedef TemplateData = {
@@ -39,6 +52,7 @@ typedef TemplateData = {
 	className:String,
 	commitFunctions : Array<CFunction>,
 	probeFunctions : Array<CFunction>,
+	events : Array<CEvent>,
 	inputs : Array<Param>,
 	bytecode : String,
 	abi : String
@@ -104,7 +118,7 @@ class Compiler{
 		}catch(e:Dynamic){
 		}
 		
-		var packagePath = ["web3","contract"];
+		var packagePath = ["web3","contract"]; //TODO "ethjs", "contract" 
 		for(path in packagePath){
 			dir = js.node.Path.join(dir,path);
 			try{
@@ -126,22 +140,24 @@ class Compiler{
 			var contractABI : ContractABI = Json.parse(contractABIString);
 			var contractBytecode = contractInfo["bytecode"]; 
 
-			var output_filename = contractName + "_abi.json";
+			var output_filename = contractName + "_abi.json"; //TODO output code too in _code.json
 			trace("writing to " + output_filename + " ...");
 			js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractABI)); 
 
 			trace("contract : " + contractName);
 
 			var filename = contractName + ".hx";
-			var template = haxe.Resource.getString("template");
+			var template = haxe.Resource.getString("template"); //TODO template is passed as argument (ethjs) if not found access filesystem
 
 			var commitFunctions = new Array<CFunction>();
 			var probeFunctions = new Array<CFunction>();
+			var events = new Array<CEvent>();
 			var inputs = new Array<Param>();
 
 
 			var constructorFunc : ContractFunction = null;
 			var funcSet = new Map<String,ContractFunction>();
+			var eventSet = new Map<String,ContractFunction>(); //TODO ContractEvent
 			for(func in contractABI){
 				if((func.type == null || func.type == "function") && func.name != null){
 					if(!funcSet.exists(func.name)){
@@ -153,6 +169,13 @@ class Compiler{
 					
 				}else if(func.type == "constructor"){
 					constructorFunc = func; //TODO overloading
+				}else if(func.type == "event"){
+					if(!eventSet.exists(func.name)){
+						eventSet.set(func.name,func);
+					}else{
+						//trace("duplicate func with name : " + func.name);
+						//TODO support overloading?
+					}
 				}
 			}
 
@@ -235,12 +258,49 @@ class Compiler{
 			}
 
 
+			for(func in eventSet){
+				if(func.name != null){
+							
+					trace(" --- " + func.name);
+
+					var cevent = {
+						name : func.name,
+						inputs : []
+					};
+
+					var i = 0;
+					for(input in func.inputs){
+						trace(" input " + input.name);
+						cevent.inputs.push({
+							indexed:input.indexed,
+							name:input.name,
+							type:haxeType(input.type),
+							last:false,
+							index:i,
+							alone:false,
+							transform:transform(input.type)
+						});
+						i++;
+					}
+					if(cevent.inputs.length > 0){
+						cevent.inputs[cevent.inputs.length-1].last = true;
+					}
+					if(cevent.inputs.length == 1){
+						cevent.inputs[0].alone = true;	
+					}
+				
+					events.push(cevent);	
+				}
+			}
+
+
 
 			var templateData : TemplateData = {
 				packagePath : packagePath.join("."),
 				className : contractName, 
 				commitFunctions : commitFunctions,
 				probeFunctions : probeFunctions,
+				events : events,
 				inputs : inputs,
 				bytecode:contractBytecode,
 				abi : contractABIString
@@ -256,6 +316,9 @@ class Compiler{
 		}
 
 	}
+
+
+	//TODO haxeType and transform need to be tested and we night require different one for different templates : This is not good
 
 	static function transform(solidityType : String) : String{
 		if(solidityType == "address[]"){
@@ -316,44 +379,3 @@ class Compiler{
 		}
 	}
 }
-
-/*
-
-var fs = require("fs");
-var path = require("path");
-var solc = require('solc');
-
-var walkSync = function(dir, filelist) {
-	var files = fs.readdirSync(dir);
-	filelist = filelist || [];
-	files.forEach(function(file) {
-		var newDir = path.join(dir,file);
-		if (fs.statSync(newDir).isDirectory()) {
-			filelist = walkSync(newDir, filelist);
-		}else{
-			filelist.push(file);
-		}
-	});
-	return filelist;
-};
-
-var input = {
-};
-var files = walkSync('contracts/');
-for (var i = 0; i < files.length; i++) {
-	var file = files[i];
-	console.log(file);
-	input[file] = fs.readFileSync('contracts/' + file).toString();
-}
-
-var output = solc.compile({sources: input}, 1);
-//for (var contractName in output.contracts)
-console.log(output);
-		
-fs.writeFile("compiled_contracts.json", JSON.stringify(output.contracts), function(err) {
-	if(err) {
-			return console.log(err);
-	}
-}); 
-
-*/

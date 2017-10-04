@@ -1,2 +1,5 @@
 node_modules
 compile.js
+compile.js.map
+Competitions_abi.json
+compiled_contracts.json

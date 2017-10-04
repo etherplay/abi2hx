@@ -4,7 +4,7 @@
   "author": "",
   "devDependencies": {
     "fs-extra": "0.30.0",
-    "solc": "0.4.11"
+    "solc": "0.4.17"
   },
   "engine": "node >= 5.0.0"
 }
