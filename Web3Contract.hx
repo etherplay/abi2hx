@@ -56,13 +56,13 @@ class {{className}}{
 			mining = true;
 			callback(null,txHash);
 		})
-		.onError(function(error,receipt){
-			if(mining){
-				mineCallback(error,null);
-			}else{
-				callback(error,null);
-			}
-		})
+		// .onError(function(error,receipt){
+		// 	if(mining){
+		// 		mineCallback(error,null);
+		// 	}else{
+		// 		callback(error,null);
+		// 	}
+		// })
 		// .onceReceipt(function(receipt){
 		// 	//TODO ?
 		// })
@@ -71,6 +71,14 @@ class {{className}}{
 		// })
 		.then(function(instance){
 			mineCallback(null,new {{className}}(web3,instance));
+		})
+		.catchError(function(error){
+			if(mining){
+				mineCallback(error,null);
+			}else{
+				callback(error,null);
+			}
+			
 		});
 	}
 	#end
@@ -255,7 +263,7 @@ class {{className}}{
 			#if web3_allow_deploy
 			code = "0x" + "{{bytecode}}";
 			#end
-			factory = new Web3.eth.Contract(abi);
+			factory = _web3.eth.newContract(abi);
 		}
 	}
 
