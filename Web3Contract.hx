@@ -41,7 +41,7 @@ class {{className}}{
 	public static function deploy(web3 : Web3, option:TransactionInfo, callback : Error -> TransactionHash -> Void, mineCallback : Error -> {{className}} -> Void) : Void{ //TODO arguments + type of callback
 		var mining = false;
 		setup(web3);
-		factory
+		var promiEvent = factory
 		.deploy({
 			data:code,
 			//TODO arguments:
@@ -51,8 +51,9 @@ class {{className}}{
 			gas : option.gas, 
 			value : option.value,
 			gasPrice : option.gasPrice
-		})
-		.onceTransactionHash(function(txHash){
+		});
+
+		promiEvent.onceTransactionHash(function(txHash){
 			mining = true;
 			callback(null,txHash);
 		})
@@ -70,9 +71,11 @@ class {{className}}{
 		// 	//dontcare
 		// })
 		.then(function(instance){
+			promiEvent.removeAllListeners();
 			mineCallback(null,new {{className}}(web3,instance));
 		})
 		.catchError(function(error){
+			promiEvent.removeAllListeners();
 			if(mining){
 				mineCallback(error,null);
 			}else{

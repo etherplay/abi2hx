@@ -100,13 +100,15 @@ class Compiler{
 
 		trace("compiling ...");
 		var output = Solc.compile({sources: input}, 1);
-		trace(output);
+		if(output.errors != null){
+			trace(output.errors);
+		}
 
 		var contractInfos : ContractInfos = output.contracts;
 
-		var output_filename = "compiled_contracts.json";
-		trace("writing to " + output_filename + " ...");
-		js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractInfos)); 
+		// var output_filename = "compiled_contracts.json";
+		// trace("writing to " + output_filename + " ...");
+		// js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractInfos)); 
 
 		// var contractInfos : ContractInfos = Json.parse(js.node.Fs.readFileSync("compiled_contracts.json").toString());
 
@@ -136,13 +138,25 @@ class Compiler{
 			}
 
 			var contractInfo = contractInfos[fileContractName];
+
+			var info_filename = contractName + "_info.json";
+			trace("writing to " + info_filename + " ...");
+			js.node.Fs.writeFileSync(info_filename, haxe.Json.stringify(contractInfo)); 
+
+
 			var contractABIString = contractInfo["interface"];
 			var contractABI : ContractABI = Json.parse(contractABIString);
 			var contractBytecode = contractInfo["bytecode"]; 
 
-			var output_filename = contractName + "_abi.json"; //TODO output code too in _code.json
-			trace("writing to " + output_filename + " ...");
-			js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractABI)); 
+			// var output_filename = contractName + "_abi.json"; //TODO output code too in _code.json
+			// trace("writing to " + output_filename + " ...");
+			// js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractABI)); 
+
+
+			// var code_filename = contractName + ".code"; //TODO output code too in _code.json
+			// trace("writing to " + code_filename + " ...");
+			// js.node.Fs.writeFileSync(code_filename, haxe.Json.stringify(contractBytecode)); 
+
 
 			trace("contract : " + contractName);
 
@@ -204,7 +218,7 @@ class Compiler{
 			for(func in funcSet){
 				if(func.name != null){
 							
-					trace(" --- " + func.name);
+					// trace(" --- " + func.name);
 
 					var cfunc = {
 						name : func.name,
@@ -232,7 +246,7 @@ class Compiler{
 
 					i = 0;
 					for(output in func.outputs){
-						trace(" output " + output.name);
+						// trace(" output " + output.name);
 						cfunc.outputs.push({
 							name:output.name,
 							type:haxeType(output.type),
@@ -261,7 +275,7 @@ class Compiler{
 			for(func in eventSet){
 				if(func.name != null){
 							
-					trace(" --- " + func.name);
+					// trace(" --- " + func.name);
 
 					var cevent = {
 						name : func.name,
@@ -270,7 +284,7 @@ class Compiler{
 
 					var i = 0;
 					for(input in func.inputs){
-						trace(" input " + input.name);
+						// trace(" input " + input.name);
 						cevent.inputs.push({
 							indexed:input.indexed,
 							name:input.name,
