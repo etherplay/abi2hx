@@ -1,6 +1,7 @@
 package {{packagePath}};
 
 import web3.Web3;
+import web3.eth.Contract;
 
 // abstract {{className}}PromiseEvent(PromiEvent<{{className}}>) from(PromiEvent<{{className}}>){
 // 	function onceTransactionHash(callback : TransactionHash -> Void): {{className}}PromiseEvent{
@@ -17,9 +18,24 @@ import web3.Web3;
 // 	}
 // }
 
+{{#events}}
+typedef {{{name}}}Event = {
+	> ContractEvent,
+	returnValues: {
+		{{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}}
+	}
+}
+{{/events}}
+
+enum EventType{
+	{{#events}}
+	{{{name}}}(event:{{{name}}}Event);
+	{{/events}}	
+}
+
 typedef ExtendedTransactionInfo = {
 	> TransactionInfo
-	,privateKey : String
+	,?privateKey : String
 }
 
 class {{className}}{
@@ -154,7 +170,6 @@ class {{className}}{
 			}
 		}else{
 		#end
-			// untyped __js__("
 			_instance.methods.{{{name}}}({{#inputs}} params.{{{name}}}{{^last}},{{/last}}{{/inputs}})
 			.send(
 				{
@@ -174,7 +189,6 @@ class {{className}}{
 					}
 				}
 			);
-			// ");
 		#if web3_allow_privateKey
 		}
 		#end
@@ -186,11 +200,7 @@ class {{className}}{
 	public function get_data_for_{{{name}}}(
 	{{#inputs.length}}params:{ {{#inputs}} {{{name}}}: {{{type}}}{{^last}},{{/last}} {{/inputs}} }{{/inputs.length}}
 	):String{
-
-		// untyped __js__("
 		return _instance.methods.{{{name}}}({{#inputs}}params.{{{name}}}{{^last}},{{/last}}{{/inputs}}).encodeABI();
-		
-		// ");
 	}
 	{{/commitFunctions}}
 
@@ -246,16 +256,51 @@ class {{className}}{
 
 
 	{{#events}}
+	public function transformReturnValuesToSpecificTypesFor{{name}}Event(event : {{name}}Event): {{name}}Event{
+		{{#inputs}}
+		event.returnValues.{{name}} = {{{pre}}}event.returnValues.{{{name}}}{{post}};
+		{{/inputs}}
+		return event;
+	}
+	{{/events}}
+
+	{{#events}}
 	public function gather_{{{name}}}_events(
 		options :{
 			?fromBlock:Float,
 			?toBlock:Float,
 			?filter:Dynamic //TODO
-		}, callback : Error -> Array<web3.Web3.Log> -> Void
+		}, callback : Error -> Array<{{{name}}}Event> -> Void
 	) : Void{
-		_instance.getPastEvents("{{name}}", options, callback);
+		_instance.getPastEvents("{{name}}", options, function(error,events){
+			if(events!=null){events = events.map(transformReturnValuesToSpecificTypesFor{{name}}Event);}
+			callback(error, events);	
+		});
 	}
 	{{/events}}
+
+	public function getPastEvents(options : {
+			?fromBlock:Float,
+			?toBlock:Float,
+			?filter:Dynamic //TODO
+		}, callback : Error -> Array<EventType> -> Void
+	) : Void{
+		_instance.getPastEvents("allEvents",options, function(error,events:Array<GenericContractEvent>){
+			if(error != null){
+				callback(error,null);
+			}else{
+				var typedEvents = events.map(function(event : GenericContractEvent){
+					return switch(event.event){
+						{{#events}}
+						case "{{name}}": {{{name}}}(transformReturnValuesToSpecificTypesFor{{name}}Event(event));
+						{{/events}}
+						default:null; //should not reach there
+					}
+				});
+				callback(null,typedEvents);
+			}
+		});
+	}
 
 	static var factory : web3.eth.Contract;
 	static var code : String;

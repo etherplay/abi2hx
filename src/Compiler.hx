@@ -33,7 +33,9 @@ typedef EParam = {
 	last : Bool,
 	index : Int,
 	alone : Bool,
-	transform : String
+	transform : String,
+	pre:String,
+	post:String
 }
 
 typedef CFunction = {
@@ -91,21 +93,41 @@ class Compiler{
 		var sourceDir = args[0];
 		var dir = args[1];
 
-		var input : DynamicAccess<String> = {};
-		var files = getRecursiveFileList(sourceDir);
-		for (file in files) {
-			trace("adding " + file + " ...");
-			input[file] = js.node.Fs.readFileSync(sourceDir + '/' + file).toString();
+
+		var compile = true;
+
+		if(args[0] == "-noCompile"){
+			compile = false;
+			sourceDir = args[1];
+			dir = args[2];
 		}
 
-		trace("compiling ...");
-		var output = Solc.compile({sources: input}, 1);
-		if(output.errors != null){
-			trace(output.errors);
+		var contractInfos : ContractInfos = null;
+
+		if(compile){
+			var input : DynamicAccess<String> = {};
+			var files = getRecursiveFileList(sourceDir);
+			for (file in files) {
+				trace("adding " + file + " ...");
+				input[file] = js.node.Fs.readFileSync(sourceDir + '/' + file).toString();
+			}
+
+			trace("compiling ...");
+			var output = Solc.compile({sources: input}, 1);
+			if(output.errors != null){
+				trace(output.errors);
+			}
+
+			contractInfos = output.contracts;
+	
+		}else{
+			contractInfos = {};
+			var content = js.node.Fs.readFileSync(sourceDir).toString();
+			var contractInfo : {name:String, contractInfo : DynamicAccess<Dynamic>} = haxe.Json.parse(content);
+			contractInfos[contractInfo.name] =  contractInfo.contractInfo;
 		}
-
-		var contractInfos : ContractInfos = output.contracts;
-
+		
+		
 		// var output_filename = "compiled_contracts.json";
 		// trace("writing to " + output_filename + " ...");
 		// js.node.Fs.writeFileSync(output_filename, haxe.Json.stringify(contractInfos)); 
@@ -141,7 +163,7 @@ class Compiler{
 
 			var info_filename = contractName + "_info.json";
 			trace("writing to " + info_filename + " ...");
-			js.node.Fs.writeFileSync(info_filename, haxe.Json.stringify(contractInfo)); 
+			js.node.Fs.writeFileSync(info_filename, haxe.Json.stringify({name:contractName,contractInfo:contractInfo})); 
 
 
 			var contractABIString = contractInfo["interface"];
@@ -284,6 +306,9 @@ class Compiler{
 
 					var i = 0;
 					for(input in func.inputs){
+						var prepostTransform = prepost(input.type).split("$v");
+						var pre = prepostTransform[0];
+						var post = prepostTransform[1];
 						// trace(" input " + input.name);
 						cevent.inputs.push({
 							indexed:input.indexed,
@@ -292,7 +317,9 @@ class Compiler{
 							last:false,
 							index:i,
 							alone:false,
-							transform:transform(input.type)
+							transform:transform(input.type),
+							pre:pre,
+							post:post
 						});
 						i++;
 					}
@@ -338,19 +365,19 @@ class Compiler{
 		if(solidityType == "address[]"){
 
 		}else if(solidityType == "uint32"){
-			return ".toNumber()";
+			// return ".toNumber()";
 		}else if(solidityType == "uint16"){
-			return ".toNumber()";
+			// return ".toNumber()";
 		}else if(solidityType == "bytes"){
 
 		}else if(solidityType == "uint8[]"){
-			return ".map(function(curr,index,arr){return curr.toNumber();})";
+			// return ".map(function(curr,index,arr){return curr.toNumber();})";
 		}else if(solidityType == "uint32[]"){
-			return ".map(function(curr,index,arr){return curr.toNumber();})";
+			// return ".map(function(curr,index,arr){return curr.toNumber();})";
 		}else if(solidityType == "uint8"){
-			return ".toNumber()";
+			// return ".toNumber()";
 		}else if(solidityType == "int8"){
-			return ".toNumber()";
+			// return ".toNumber()";
 		}else if(solidityType == "uint256"){
 			
 		}else if(solidityType == "address"){
@@ -363,16 +390,57 @@ class Compiler{
 		return "";
 	}
 
+	static function prepost(solidityType : String) :String{
+		if(solidityType == "address[]"){
+
+		}else if(solidityType == "uint8" 
+			|| solidityType == "uint32"
+			|| solidityType == "int32"
+			|| solidityType == "int8"
+			|| solidityType == "int16"
+			|| solidityType == "uint24"
+			|| solidityType == "int24" 
+			|| solidityType == "uint16"){
+			return "Std.parseInt(untyped $v)";
+		}else if(solidityType == "bytes"){
+
+		}else if(solidityType == "uint8[]" 
+			|| solidityType == "uint32[]"
+			|| solidityType == "int32[]"
+			|| solidityType == "int8[]"
+			|| solidityType == "int16[]"
+			|| solidityType == "uint24[]"
+			|| solidityType == "int24[]" 
+			|| solidityType == "uint16[]"){
+			return "$v.map(function(curr){return Std.parseInt(untyped curr);})";
+		}else if(solidityType.indexOf("int") == 0 || solidityType.indexOf("uint") == 0){
+			if(solidityType.indexOf("[]")==solidityType.length-2){
+				return "$v.map(function(curr){return Utils.toBN(untyped curr);})";
+			}else{
+				return "Utils.toBN($v)";	
+			}
+		}else if(solidityType == "address"){
+			//TODO toLowerCase() ?
+		}else if(solidityType == "bytes32"){
+
+		}else{
+			
+		}
+		return "$v";
+	}
+
 	static function haxeType(solidityType : String) : String{
 		return switch(solidityType){
 			case "bool": "Bool";
 			case "address[]": "Array<web3.Web3.Address>";
-			case "uint32" | "uint8" | "uint16" : "UInt";
-			case "int32" | "int8" | "int16" : "Int";
+			case "uint32" | "uint8" | "uint16" | "uint24" : "UInt";
+			case "int32" | "int8" | "int16" | "int24" : "Int";
 			case "bytes" | "bytes32" : "String";
-			case "uint256" | "uint64" | "uint88" | "uint128" : "bignumberjs.BigNumber";
+			case "uint56" | "uint256" | "uint64" | "uint88" | "uint128" : "BN"; //TODO pattern matching
+			case "int56" | "int256" | "int64" | "int88" | "int128" : "BN";
 			case "address" : "web3.Web3.Address";
-			case "uint8[]" | "uint32[]" : "Array<UInt>";
+			case "uint8[]" | "uint32[]" | "uint16[]" | "uint24[]" : "Array<UInt>";
+			case "int8[]" | "int32[]" | "int16[]" | "int24[]" : "Array<Int>";
 			case "string" : "String";
 			default:	trace("TODO : solidityType mapping : ", solidityType); "Dynamic";	
 		}
@@ -382,12 +450,14 @@ class Compiler{
 		return switch(solidityType){
 			case "bool": "Bool";
 			case "address[]": "Array<web3.Web3.Address>";
-			case "uint32" | "uint8" | "uint16" : "UInt";
-			case "int32" | "int8" | "int16" : "Int";
+			case "uint24" | "uint32" | "uint8" | "uint16" : "UInt";
+			case "int24" | "int32" | "int8" | "int16" : "Int";
 			case "bytes" | "bytes32" : "String";
-			case "uint256" | "uint64" | "uint88" | "uint128" : "String"; //TODO bigNumber but require conversion back to String
+			case "uint56" | "uint256" | "uint64" | "uint88" | "uint128" : "String"; //TODO BN ? //TODO pattern matching
+			case "int56" | "int256" | "int64" | "int88" | "int128" : "String"; //TODO BN ? //TODO pattern matching
 			case "address" : "web3.Web3.Address";
-			case "uint8[]" | "uint32[]" : "Array<UInt>";
+			case "uint8[]" | "uint32[]" | "uint16[]" | "uint24[]" : "Array<UInt>";
+			case "int8[]" | "int32[]" | "int16[]" | "int24[]" : "Array<Int>";
 			case "string" : "String";
 			default:	trace("TODO : solidityType mapping : ", solidityType); "Dynamic";	
 		}
