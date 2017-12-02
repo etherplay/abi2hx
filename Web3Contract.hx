@@ -27,16 +27,14 @@ typedef {{{name}}}Event = {
 }
 {{/events}}
 
+
+{{#events.length}} //TODO export that as a global class for all contract event used ?
 enum EventType{
 	{{#events}}
 	{{{name}}}(event:{{{name}}}Event);
 	{{/events}}	
 }
-
-typedef ExtendedTransactionInfo = {
-	> TransactionInfo
-	,?privateKey : String
-}
+{{/events.length}}
 
 class {{className}}{
 
@@ -279,6 +277,7 @@ class {{className}}{
 	}
 	{{/events}}
 
+	{{#events.length}} 
 	public function getPastEvents(options : {
 			?fromBlock:Float,
 			?toBlock:Float,
@@ -301,6 +300,7 @@ class {{className}}{
 			}
 		});
 	}
+	{{/events.length}} 
 
 	static var factory : web3.eth.Contract;
 	static var code : String;
